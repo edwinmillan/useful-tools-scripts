@@ -1,4 +1,6 @@
-﻿[System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") | Out-Null
+﻿# Written by Edwin Millan July 2017
+
+[System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") | Out-Null
 
 Function Get-FileName
 {
@@ -6,6 +8,7 @@ Function Get-FileName
     
     $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
     $OpenFileDialog.initialDirectory = Get-Location
+    $OpenFileDialog.ShowHelp = $true
     $OpenFileDialog.ShowDialog() | Out-Null
     $OpenFileDialog.filename
 }
@@ -15,7 +18,6 @@ Function Get-FolderName
     $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
         SelectedPath = Get-Location
     }
- 
     $FolderBrowser.ShowDialog() | Out-Null
     $FolderBrowser.SelectedPath
 }
@@ -26,14 +28,22 @@ Function Write-MD5File()
         [Parameter(Mandatory=$true)][string]$file,
         [Parameter(Mandatory=$true)][string]$single
     )
-
-    $rawhash = Get-FileHash -Algorithm MD5 -Path $file
+    
+    # Use an older method of calculating MD5 if Powershell version is less than 4.0
+    if ($host.Version.Major -lt 4)
+    {
+        $md5 = New-Object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider
+        $filehash = [System.BitConverter]::ToString($md5.ComputeHash([System.IO.File]::ReadAllBytes($file))) -replace "-", ""
+    }
+    else
+    {
+        $filehash = (Get-FileHash -Algorithm MD5 -Path $file).Hash 
+    }
     $filepath = Split-Path $file
-    $filehash =  $rawhash.Hash
     $filename = Split-path $file -Leaf
-    $md5filename = "$([io.path]::GetFileNameWithoutExtension($file)).md5"
-    Write-Output "$filehash  $filename" > (Join-Path $filepath $md5filename)
-    if ($single -eq $true) {Write-Host "[$filehash  $filename] has been written to $md5filename"}
+    #$md5filename = "$([io.path]::GetFileNameWithoutExtension($file)).md5"
+    Write-Output "$filehash  $filename" > (Join-Path $filepath "$filename.md5")
+    if ($single -eq $true) {Write-Host "[$filehash  $filename] has been written to $filename.md5"}
 }
 
 # Ask the user what scope they will be using the MD5 generator.
