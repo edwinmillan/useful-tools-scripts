@@ -1,0 +1,1 @@
+Get-ADUser -Identity [Source Username] -Properties memberof | Select-Object -ExpandProperty memberof | Add-ADGroupMember -Members [Dest. Username] -PassThru | Select-Object -Property SamAccountName
